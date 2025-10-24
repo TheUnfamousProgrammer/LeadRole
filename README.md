@@ -30,6 +30,7 @@ Built with **Node.js**, **TypeScript**, and **Firebase Firestore**, the backend 
 
 ### ⚙️ Job Pipeline Flow
 
+```mermaid
 flowchart TD
     A[User starts job] --> B[Luma: Base video]
     B --> C[FaceSwap (Replicate Roop)]
