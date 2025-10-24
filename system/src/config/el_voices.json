@@ -1,0 +1,14 @@
+{
+    "NarrationMale": {
+        "elevenlabs_voice_id": "4dZr8J4CBeokyRkTRpoN"
+    },
+    "NarrationFemale": {
+        "elevenlabs_voice_id": "4dZr8J4CBeokyRkTRpoN"
+    },
+    "StoryMale": {
+        "elevenlabs_voice_id": "4dZr8J4CBeokyRkTRpoN"
+    },
+    "StoryFemale": {
+        "elevenlabs_voice_id": "4dZr8J4CBeokyRkTRpoN"
+    }
+}
