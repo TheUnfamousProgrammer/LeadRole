@@ -1,4 +1,4 @@
-# 🎬 LeadRole , AI-Driven Virtual Filmmaking Platform
+# 🎬 LeadRole, AI-Driven Virtual Filmmaking Platform
 
 **LeadRole** transforms users into the lead actor of their own cinematic stories.  
 It generates personalized AI videos by combining **virtual cinematography, face-swapping, lip-syncing, and voiceover**, all orchestrated through a modular, fault-tolerant backend pipeline.
