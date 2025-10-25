@@ -1,154 +1,79 @@
-# 🎬 LeadRole — AI-Driven Virtual Filmmaking Platform
+# 🎬 LeadRole , AI-Driven Virtual Filmmaking Platform
 
-[![Node.js](https://img.shields.io/badge/Node.js-18.x-brightgreen)]()
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-blue)]()
-[![Firestore](https://img.shields.io/badge/Firebase-Firestore-orange)]()
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]()
-
-**LeadRole** lets anyone become the *lead actor* of their own cinematic story.  
-It generates personalized AI videos by combining virtual cinematography, face-swapping, lip-syncing, and voiceover — all orchestrated through a modular production pipeline.
+**LeadRole** transforms users into the lead actor of their own cinematic stories.  
+It generates personalized AI videos by combining **virtual cinematography, face-swapping, lip-syncing, and voiceover**, all orchestrated through a modular, fault-tolerant backend pipeline.
 
 ---
 
-## 🧩 System Overview
+## 🧩 System Architecture
 
-### 🛠️ Backend — `system/`
+LeadRole is composed of two main components:
 
-Built with **Node.js**, **TypeScript**, and **Firebase Firestore**, the backend coordinates every creative job end-to-end.
+### 🖥️ Backend , `system/`
+Built with **Node.js**, **TypeScript**, **Firestore**, and **Redis**.
 
-#### Key Responsibilities
-| Module | Description |
-|--------|--------------|
-| **API Layer** | Express-based REST API for jobs, personas, and media |
-| **Worker Queue** | BullMQ with Redis for async, fault-tolerant processing |
-| **Pipeline Steps** | Modular orchestration for `luma`, `faceswap`, `tts`, `lipsync`, `watermark` |
-| **Storage** | Cloudinary for assets, Cloudinary Stream for final delivery |
-| **Database** | Firestore collections: `users`, `personas`, `jobs` |
-| **Vendor Integrations** | Luma (base video), Replicate (AI models), ElevenLabs (TTS), Cloudinary (stream hosting) |
+#### Responsibilities
+- **API Layer:** NextJS based REST API for job creation, persona management, and progress tracking.  
+- **Worker Pipeline:** BullMQ queue running on Redis, executing modular steps:
+  1. **Base Video Generation** (Luma API)
+  2. **FaceSwap** (Replicate Roop model)
+  3. **Voiceover (TTS)** (ElevenLabs API)
+  4. **LipSync** (Replicate LipSync-2 model)
+  5. **Watermarking & Upload** (Cloudinary CDN & FFmpeg)
+
+#### Data Flow
+1. User submits a prompt & persona via mobile app.  
+2. The backend builds an enhanced cinematic prompt using `promptBuilder.ts`.  
+3. Jobs are inserted into Firestore and queued in Redis.  
+4. Each worker updates Firestore as steps complete, including:
+   - `status` → (e.g., `luma_generating`, `faceswap_running`, `done`)
+   - `assets` → (e.g., Cloudinary URLs, progress clips, final output)
+   - `vendor_refs` → (Replicate/Luma job IDs)
+   - `error` → (structured logs for debugging)
+
+Firestore acts as the **single source of truth**, polled live by the Flutter app.
 
 ---
 
-### ⚙️ Job Pipeline Flow
+### 📱 Mobile App , `mobile/`
+Built with **Flutter 3**, using **Riverpod** for state management and **Dio** for API communication.
 
-```mermaid
-flowchart TD
-    A[User starts job] --> B[Luma: Base video]
-    B --> C[FaceSwap (Replicate Roop)]
-    C --> D[TTS (ElevenLabs)]
-    D --> E[LipSync (Replicate LipSync-2)]
-    E --> F[Watermark & Cloudinary Upload]
-    F --> G[Firestore: Job Done ✅]
+#### Core Features
+| Feature | Description |
+|----------|--------------|
+| 🎭 **Persona Creator** | Captures selfie + appearance attributes (gender, hair, style, etc.) |
+| 🎬 **Scene Wizard** | Wizard-based flow guiding users through location, lighting, and mood setup |
+| 🎙️ **Narration Editor** | Requires narration input (text + voice profile) before generation |
+| 🧾 **Production Monitor** | Displays real-time job updates via StreamBuilder polling |
+| 📡 **Progress Reel** | Shows blurred Luma preview clips (“dailies”) as the pipeline runs |
+| 💾 **Inline Player & Download** | Final MP4 preview + local download with progress indicator |
 
-Each step updates Firestore with:
-	•	status (luma_generating, faceswap_running, lipsync_running, etc.)
-	•	assets (URLs for progress, faceswap, lipsync, and final output)
-	•	vendor_refs (Replicate job IDs, Luma IDs)
-	•	error (if any)
+#### UI Technologies
+- **State:** Riverpod (reactive, provider-based architecture)  
+- **Navigation:** GoRouter  
+- **Video:** `video_player` plugin for inline playback  
+- **Persistence:** SharedPreferences for auth and settings  
+- **Networking:** Dio for REST communication
 
-The mobile app polls this document to reflect progress live.
+---
 
-⸻
+## ⚙️ Production Pipeline
 
-📱 Mobile App — mobile/
+| Step | Backend Label | Description |
+|------|----------------|--------------|
+| 🎥 Base Generation | `luma_generating` | Generates cinematic base video (Luma API) |
+| 📤 Base Ready | `base_ready` | Uploads base MP4 to Cloudinary |
+| 🎭 FaceSwap | `faceswap_running` | Applies user’s persona face via Replicate Roop |
+| 🎙️ Voiceover | `tts_generating` | Generates audio narration using ElevenLabs |
+| 🔊 LipSync | `lipsync_running` | Syncs lip motion and expressions (Replicate LipSync-2) |
+| ✨ Watermark | `watermarking` | Adds branding and exports final cut |
+| ✅ Done | `done` | Final Cloudinary URL stored and returned to app |
 
-A Flutter companion app for iOS and Android, providing a complete cinematic dashboard.
+---
 
-Key Features
+## 🧠 Example Job Document
 
-Feature	Description
-🎭 Persona Creator	Capture selfie + traits to personalize face-swapping
-🧾 Scene Wizard	Configure location, mood, lighting, outfit, and camera style
-🎙️ Narration Editor	Type or record narration (TTS integrated)
-🎬 Production Monitor	Real-time job progress and AI pipeline visualization
-📡 Progress Reel	Shows blurred previews & in-progress dailies from Luma
-🧰 Download Player	Inline MP4 playback + local save with progress bar
-
-Flutter Stack
-	•	State Management: Riverpod
-	•	Navigation: GoRouter
-	•	Networking: Dio
-	•	Playback: video_player
-	•	Storage: SharedPreferences
-	•	UI: Material 3 + Neon accent design
-
-⸻
-
-🧠 Job Status States
-
-Stage	Firestore Status	Description
-🎞️ Base Video	generating_base_video	Luma prompt generating cinematic clip
-✅ Base Ready	base_ready	Ready for face swap
-🎭 FaceSwap	faceswap_running	Roop model applying user selfie
-🎙️ VoiceOver	tts_generating	ElevenLabs generating narration
-🔊 LipSync	lipsync_running	Replicate LipSync-2 aligning speech
-✨ Watermark	watermarking	Final pass before upload
-🏁 Done	done	Final video available
-❌ Failed	failed	Pipeline interrupted
-
-
-⸻
-
-⚙️ Environment Setup
-
-Backend .env
-
-REDIS_URL=redis://...
-GOOGLE_APPLICATION_CREDENTIALS=/Users/Apple/...
-FIREBASE_PROJECT_ID=...
-LUMA_API_KEY=luma-...
-
-MAX_LUMA_WAIT_MS=600000 # 10 minutes     
-LUMA_POLL_INTERVAL=15000 # 15 seconds
-
-REPLICATE_API_TOKEN=r8_...
-
-REPLICATE_WAIT_TIMEOUT_MS=900000 # 15 minutes
-REPLICATE_VERIFY_POLLS=5 
-REPLICATE_VERIFY_INTERVAL_MS=2500 # 3 seconds
-
-# ElevenLabs (TTS)
-ELEVENLABS_API_KEY=sk_...
-
-# Cloudinary (to host the MP3 returned by ElevenLabs)
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
-CLOUDINARY_UPLOAD_PRESET=lr...
-
-NARRATION_STRICT_LIMIT=true
-
-WATERMARK_ASSET_URL=https://imagedelivery.net/example
-WATERMARK_SCALE=0.5
-WATERMARK_PAD=32
-WATERMARK_MIN_PX=96
-WATERMARK_MAX_PX=320
-
-JWT_SECRET=......
-
-
-⸻
-
-🚀 Running Locally
-
-1️⃣ Backend
-
-cd system
-npm install
-npm run dev | npm run worker:dev
-# Starts Express API and queue worker
-
-2️⃣ Mobile
-
-cd mobile
-flutter pub get
-flutter run
-
-Ensure your config and Firebase credentials are set up locally.
-
-⸻
-
-🔄 Job Document Example
-
+```json
 {
   "id": "1fTnjy0BVF3fqAiz56ZW",
   "user_id": "demo-user-001",
@@ -158,7 +83,7 @@ Ensure your config and Firebase credentials are set up locally.
     "luma_id": "5a3f807e-2e6c-422b-b662-4c138ffc71cd"
   },
   "assets": {
-    "progress_video_url": "https://storage.cdn-luma.com/dm-progress/.../40.mp4",
+    "progress_video_url": "https://storage.cdn-luma.com/.../40.mp4",
     "lipsync_url": null,
     "final_url": null
   },
@@ -169,71 +94,85 @@ Ensure your config and Firebase credentials are set up locally.
   },
   "updated_at": 1761330005908
 }
+```
 
+---
 
-⸻
+## 🔐 Authentication Flow
 
-☁️ Deployment
+- Simple **email + password** system managed on Firestore.  
+- Tokenless session (user ID persisted via SharedPreferences, JWT started but not fully implemented.).  
+- All generation endpoints are public (for MVP).  
+- Auth persistence handled by `authProvider` (Riverpod).
 
-Component	Platform	Notes
-API / Worker	Railway.app	Node.js + Firestore + Redis
-Storage	Cloudinary + Cloudinary Stream	Fast delivery for generated content
-Mobile App	TestFlight / Google Play Internal
-Logging	Firestore events + Cloudinary analytics	Unified monitoring
+---
 
+## 🧰 Tech Stack Summary
 
-⸻
+| Layer | Tools |
+|--------|-------|
+| **Backend** | Node.js, TypeScript, Firestore, BullMQ, Redis |
+| **AI Vendors** | Luma, Replicate (Roop, LipSync-2), ElevenLabs |
+| **Storage/CDN** | Cloudinary, Cloudinary Stream |
+| **Mobile** | Flutter, Riverpod, Dio, GoRouter, video_player |
+| **Infrastructure** | Railway (API + Worker), Firebase (Auth + DB) |
 
-🧱 Architecture Principles
-	•	Modular AI pipeline → each step is independent and retryable
-	•	Idempotent jobs → keyed by idempotency_key
-	•	Reactive UI → mobile polls Firestore live
-	•	Serverless-friendly → designed for Railway / Vercel workers
-	•	Human-readable status updates → every pipeline stage logged in Director’s Monitor
+---
 
-⸻
+## 🚀 Setup Instructions
 
-🧰 Tech Stack Summary
+### Backend
+```bash
+cd system
+npm install
+npm run dev
+# or for worker
+npm run worker:dev
+```
 
-Layer	Tech
-Backend	Node.js, TypeScript, Firestore, BullMQ, Redis
-AI Vendors	Luma, Replicate (Roop, LipSync-2), ElevenLabs
-Storage	Cloudinary, Cloudinary Stream
-Mobile	Flutter, Riverpod, Dio, GoRouter, video_player
-Infra	Railway, Firebase, GitHub Actions
-Auth	Email-based (JWT optional, Firestore scoped)
+### Mobile
+```bash
+cd mobile
+flutter pub get
+flutter run
+```
 
+Ensure `.env` contains:
 
-⸻
+```bash
+REDIS_URL=redis://...
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
+FIREBASE_PROJECT_ID=...
+LUMA_API_KEY=...
+REPLICATE_API_TOKEN=...
+ELEVENLABS_API_KEY=...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+```
 
-🧩 Future Roadmap
-	•	🌐 Web dashboard for creators
-	•	🧾 Billing + credit system
-	•	🧱 SDK for custom AI pipeline extensions
+---
 
-⸻
+## ☁️ Deployment
 
-🤝 Contributing
+| Component | Platform | Notes |
+|------------|-----------|-------|
+| API + Worker | Railway.app | Handles async job queue |
+| Storage | Cloudinary | Hosts videos and assets |
+| Database | Firestore | Tracks users and jobs |
+| Mobile | Flutter | Built for iOS + Android |
+| Monitoring | Firestore logs + Cloudinary analytics |
 
-We welcome contributions!
-	•	Fork this repo
-	•	Create a feature branch (git checkout -b feature/amazing)
-	•	Commit and push your changes
-	•	Open a PR 🎉
+---
 
+## 👨‍💻 Author
 
-⸻
+**LeadRole**  
+Created by [TheUnfamousProgrammer](https://github.com/TheUnfamousProgrammer)  
+Built as a full-stack AI filmmaking proof of concept , designed, coded, and integrated from scratch in 72 hours.
 
-👨‍🎨 Authors
+---
 
-LeadRole — AI Filmmaking Platform
-Built by theunfamourprogrammer
-	•	Backend: Node.js + TypeScript + Firestore
-	•	Mobile: Flutter + Riverpod + GoRouter
+## 🪄 License
 
-⸻
-
-🪄 License
-
-Licensed under the MIT License © 2025 LeadRole
-Use responsibly for creative, educational, and non-malicious purposes.
+Licensed under the **MIT License © 2025 LeadRole**
